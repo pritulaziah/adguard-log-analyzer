@@ -3,23 +3,14 @@ use anyhow::{Result};
 use std::{
     fs::{File, write, create_dir_all},
     io::{BufRead, BufReader},
-    path::PathBuf,
 };
 mod parser;
-use parser::{LogLevel, LogParser, LogEntry};
-
-#[derive(Parser, Debug)]
-#[command(version, about)]
-struct Args {
-    file_path: PathBuf,
-    #[arg(long, short = 'l', value_enum, ignore_case = true)]
-    level: Option<LogLevel>,
-    #[arg(long)]
-    save: bool,
-}
+use parser::{LogParser, LogEntry};
+mod cli;
+use cli::Cli;
 
 fn main() -> Result<()> {
-    let args = Args::parse();
+    let args = Cli::parse();
     let level = args.level.as_ref();
     let file_path = &args.file_path;
 
