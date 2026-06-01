@@ -1,5 +1,5 @@
 use chrono::NaiveDateTime;
-use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::{fmt::{Display, Formatter, Result as FmtResult}, str::FromStr};
 
 #[derive(clap::ValueEnum, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum LogLevel {
@@ -16,6 +16,19 @@ impl Display for LogLevel {
             LogLevel::Info => write!(f, "info"),
             LogLevel::Warning => write!(f, "warning"),
             LogLevel::Error => write!(f, "error"),
+        }
+    }
+}
+
+impl FromStr for LogLevel {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "INFO" => Ok(LogLevel::Info),
+            "VERBOSE" => Ok(LogLevel::Verbose),
+            "WARNING" => Ok(LogLevel::Warning),
+            "ERROR" => Ok(LogLevel::Error),
+            _ => Err(format!("unknown level: {}", s)),
         }
     }
 }
