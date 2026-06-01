@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 #[derive(clap::ValueEnum, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum LogLevel {
@@ -6,6 +7,17 @@ pub enum LogLevel {
     Info,
     Warning,
     Error,
+}
+
+impl Display for LogLevel {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        match self {
+            LogLevel::Verbose => write!(f, "verbose"),
+            LogLevel::Info => write!(f, "info"),
+            LogLevel::Warning => write!(f, "warning"),
+            LogLevel::Error => write!(f, "error"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
