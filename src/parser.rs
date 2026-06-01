@@ -1,19 +1,21 @@
 use chrono::NaiveDateTime;
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(clap::ValueEnum, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum LogLevel {
     Verbose,
     Info,
     Warning,
     Error,
-    Unknown(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LogEntry {
     pub level: LogLevel,
+    #[allow(dead_code)]
     pub process: String,
+    #[allow(dead_code)]
     pub logger: String,
+    #[allow(dead_code)]
     pub thread_id: u32,
     pub timestamp: NaiveDateTime,
     pub message: String,
@@ -34,7 +36,7 @@ impl LogParser {
             "VERBOSE" => LogLevel::Verbose,
             "WARNING" => LogLevel::Warning,
             "ERROR" => LogLevel::Error,
-            _ => LogLevel::Unknown(parts[0].to_string()),
+            _ => return None,
         };
 
         let process = parts[1].to_string();

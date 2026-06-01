@@ -1,19 +1,20 @@
 use clap::Parser;
 use anyhow::Result;
 use std::{
-    collections::HashMap,
     fs::File,
     io::{BufRead, BufReader},
     path::PathBuf,
 };
 
 mod parser;
-use parser::{LogLevel, LogParser};
+use parser::{LogLevel, LogParser, LogEntry};
 
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
     file_path: PathBuf,
+    #[arg(long, ignore_case = true)]
+    level: Option<LogLevel>,
 }
 
 fn main() -> Result<()> {
@@ -22,7 +23,7 @@ fn main() -> Result<()> {
     let file = File::open(&args.file_path)?;
     let reader = BufReader::new(file);
 
-    let mut counts: HashMap<LogLevel, u32> = HashMap::new();
+    let mut logs: Vec<LogEntry> = Vec::new();
 
     for (i, line) in reader.lines().enumerate() {
         let mut line = line?;
@@ -32,12 +33,26 @@ fn main() -> Result<()> {
         }
 
         if let Some(entry) = LogParser::parse_line(&line) {
-            *counts.entry(entry.level).or_insert(0) += 1;
+            logs.push(entry);
         }
     }
 
-    for (level, count) in &counts {
-        println!("{:?} {}", level, count);
+    let iter_logs = logs.iter();
+
+    if args.level.is_some() {
+        let current_level = args.level.clone().unwrap();
+
+        let results: Vec<&LogEntry> = iter_logs
+            .filter(|log_entry| log_entry.level == current_level)
+            .collect();
+
+        for entry in &results {
+            println!("{:?}, {}", entry.timestamp, entry.message);
+        }
+    } else {
+        for entry in iter_logs {
+            println!("{:?}, {:?}, {}", entry.level, entry.timestamp, entry.message);
+        }
     }
 
     Ok(())
