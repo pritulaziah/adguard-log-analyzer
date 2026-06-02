@@ -1,5 +1,5 @@
 use clap::Parser;
-use crate::logger::LogLevel;
+use crate::models::LogLevel;
 use std::path::PathBuf;
 use anyhow::{Result};
 

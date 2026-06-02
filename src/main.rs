@@ -4,6 +4,7 @@ mod cli;
 use cli::Cli;
 mod logger;
 use logger::{Logger};
+mod models;
 
 fn main() -> Result<()> {
     let args = Cli::parse()?;
