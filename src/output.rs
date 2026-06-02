@@ -1,8 +1,61 @@
-use crate::{ cli::Cli, models::{ LogEntry } };
-use std::fs;
-use anyhow::Result;
+use crate::{ cli::Cli, models::{ LogEntry, LogLevel } };
+use std::{ collections::HashMap, fs };
+use anyhow::{ Ok, Result };
+use colored::*;
+
+fn format_duration(duration: chrono::Duration) -> String {
+    let total_seconds = duration.num_seconds();
+
+    let hours = total_seconds / 3600;
+    let minutes = (total_seconds % 3600) / 60;
+    let seconds = total_seconds % 60;
+
+    format!("{hours}h {minutes}m {seconds}s")
+}
 
 pub fn output_logs(logs: Vec<LogEntry>, opts: &Cli) -> Result<()> {
+    if opts.stats {
+        let len_logs = logs.len();
+        let mut counts = HashMap::new();
+
+        for entry in &logs {
+            *counts.entry(entry.level.clone()).or_insert(0) += 1;
+        }
+
+        let first_log = logs.first().map(|entry| entry.timestamp);
+        let last_log = logs.last().map(|entry| entry.timestamp);
+
+        let duration = match (first_log, last_log) {
+            (Some(first), Some(last)) => Some(last - first),
+            _ => None,
+        };
+
+        println!("Total logs: {}", len_logs);
+        println!();
+        for level in &[LogLevel::Info, LogLevel::Error, LogLevel::Warning, LogLevel::Verbose] {
+            let label = format!("{:<12}", level.to_string());
+            let colored = match level {
+                LogLevel::Info => label.green(),
+                LogLevel::Error => label.red(),
+                LogLevel::Warning => label.yellow(),
+                LogLevel::Verbose => label.blue(),
+            };
+            println!("{} {}", colored, counts.get(level).unwrap_or(&0));
+        }
+
+        if
+            let (Some(first), Some(last), Some(duration)) = (first_log, last_log, duration) &&
+            len_logs > 1
+        {
+            println!();
+            println!("First log:  {}", first.format("%d.%m.%Y %H:%M:%S%.3f"));
+            println!("Last log:   {}", last.format("%d.%m.%Y %H:%M:%S%.3f"));
+            println!("Duration:   {}", format_duration(duration));
+        }
+
+        return Ok(());
+    }
+
     let output = logs
         .iter()
         .map(|entry| entry.to_string())
@@ -19,7 +72,7 @@ pub fn output_logs(logs: Vec<LogEntry>, opts: &Cli) -> Result<()> {
         let folder = format!("result_logs/{}", output_path);
         fs::create_dir_all(&folder)?;
 
-        let mut parts = vec![format!("{}/{}", folder, log_level)];
+        let mut parts = vec![format!("{}/{}", folder, log_level.to_lowercase())];
 
         if let Some(n) = opts.first {
             parts.push(format!("first{}", n));

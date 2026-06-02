@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::fmt::{ Display, Formatter, Result as FmtResult };
 use std::str::FromStr;
 use chrono::NaiveDateTime;
 
@@ -13,10 +13,10 @@ pub enum LogLevel {
 impl Display for LogLevel {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         match self {
-            LogLevel::Verbose => write!(f, "verbose"),
-            LogLevel::Info => write!(f, "info"),
-            LogLevel::Warning => write!(f, "warning"),
-            LogLevel::Error => write!(f, "error"),
+            LogLevel::Verbose => write!(f, "VERBOSE"),
+            LogLevel::Info => write!(f, "INFO"),
+            LogLevel::Warning => write!(f, "WARNING"),
+            LogLevel::Error => write!(f, "ERROR"),
         }
     }
 }

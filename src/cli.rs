@@ -31,6 +31,9 @@ pub struct Cli {
 
     #[arg(long, value_parser = parse_positive)]
     pub last: Option<usize>,
+
+    #[arg(long)]
+    pub stats: bool,
 }
 
 impl Cli {
@@ -43,6 +46,10 @@ impl Cli {
     fn validate(&self) -> Result<()> {
         if self.first.is_some() && self.last.is_some() {
             anyhow::bail!("--first and --last cannot be used together");
+        }
+
+        if (self.level.is_some() || self.save) && self.stats {
+            anyhow::bail!("--level and --save cannot be used with --stats");
         }
 
         if !self.file_path.is_file() {
