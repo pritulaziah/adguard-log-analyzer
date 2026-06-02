@@ -33,6 +33,12 @@ impl LogReader {
             }
         }
 
+        if let Some(prev) = current {
+            if let Some(entry) = LogParser::parse_line(&prev) {
+                logs.push(entry);
+            }
+        }
+
         Ok(logs)
     }
 
