@@ -11,6 +11,13 @@ fn main() -> Result<()> {
     let args = Cli::parse();
     let level = args.level.as_ref();
     let file_path = &args.file_path;
+    let save = args.save;
+    let first = args.first;
+    let last = args.last;
+
+    if first.is_some() && last.is_some() {
+        anyhow::bail!("--first and --last cannot be used together");
+    }
 
     if !file_path.is_file() {
         anyhow::bail!("Expected a file path, got '{}'", file_path.display());
@@ -30,9 +37,17 @@ fn main() -> Result<()> {
         output.push(format!("{:?}, {:?}, {}", entry.level, entry.timestamp, entry.message));
     }
 
-    if args.save {
-        fs::create_dir_all("result_logs")?;
-        let level_logs = match level {
+    if let Some(n) = first {
+        output.truncate(n);
+    } else if let Some(n) = last {
+        let len = output.len();
+        if n < len {
+            output.drain(0..len - n);
+        }
+    }
+
+    if save {
+        let log_level = match level {
             Some(level) => level.to_string(),
             None => "all".to_string(),
         };
@@ -42,8 +57,18 @@ fn main() -> Result<()> {
             .to_string_lossy()
             .to_string();
 
-        let to_save = format!("result_logs/{}_{}", level_logs, output_path);
-        fs::write(&to_save, output.join("\n"))?;
+        let folder = format!("result_logs/{}", output_path);
+        fs::create_dir_all(&folder)?;
+
+        let mut parts = vec![format!("{}/{}", folder, log_level)];
+
+        if let Some(n) = first {
+            parts.push(format!("first{}", n));
+        } else if let Some(n) = last {
+            parts.push(format!("last{}", n));
+        }
+
+        fs::write(format!("{}.log", parts.join("_")), output.join("\n"))?;
     } else {
         println!("{}", output.join("\n"));
     }
