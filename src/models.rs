@@ -46,3 +46,9 @@ pub struct LogEntry {
     pub timestamp: NaiveDateTime,
     pub message: String,
 }
+
+impl Display for LogEntry {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "{:?}, {:?}, {}", self.level, self.timestamp, self.message)
+    }
+}

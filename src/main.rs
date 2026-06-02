@@ -1,10 +1,12 @@
-use anyhow::{Result};
-use std::{fs};
+use anyhow::{ Result };
+use std::{ fs };
+mod models;
 mod cli;
 use cli::Cli;
 mod log_parser;
-use log_parser::{LogParser};
-mod models;
+use log_parser::{ LogParser };
+mod log_query;
+use log_query::{ LogQuery, QueryOptions };
 
 fn main() -> Result<()> {
     let args = Cli::parse()?;
@@ -15,38 +17,24 @@ fn main() -> Result<()> {
     let last = args.last;
 
     let logs = LogParser::parse_file(file_path)?;
-
-    let mut output: Vec<String> = Vec::new();
-
-    for entry in logs.iter() {
-        if let Some(filter) = level {
-            if filter != &entry.level {
-                continue;
-            }
-        }
-
-        output.push(format!("{:?}, {:?}, {}", entry.level, entry.timestamp, entry.message));
-    }
-
-    if let Some(n) = first {
-        output.truncate(n);
-    } else if let Some(n) = last {
-        let len = output.len();
-        if n < len {
-            output.drain(0..len - n);
-        }
-    }
+    let opts = QueryOptions {
+        level,
+        first,
+        last,
+    };
+    let selected_logs = LogQuery::query_logs(logs, opts);
+    let output = selected_logs
+        .iter()
+        .map(|entry| entry.to_string())
+        .collect::<Vec<String>>()
+        .join("\n");
 
     if save {
         let log_level = match level {
             Some(level) => level.to_string(),
             None => "all".to_string(),
         };
-        let output_path = file_path
-            .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .to_string();
+        let output_path = file_path.file_name().unwrap().to_string_lossy().to_string();
 
         let folder = format!("result_logs/{}", output_path);
         fs::create_dir_all(&folder)?;
@@ -59,9 +47,9 @@ fn main() -> Result<()> {
             parts.push(format!("last{}", n));
         }
 
-        fs::write(format!("{}.log", parts.join("_")), output.join("\n"))?;
+        fs::write(format!("{}.log", parts.join("_")), output)?;
     } else {
-        println!("{}", output.join("\n"));
+        println!("{}", output);
     }
 
     Ok(())
