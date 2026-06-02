@@ -7,10 +7,10 @@ use std::{
 use chrono::NaiveDateTime;
 use crate::models::{LogEntry, LogLevel};
 
-pub struct Logger;
+pub struct LogParser;
 
-impl Logger {
-    pub fn read_logs<P: AsRef<Path>>(file_path: P) -> Result<Vec<LogEntry>> {
+impl LogParser {
+    pub fn parse_file<P: AsRef<Path>>(file_path: P) -> Result<Vec<LogEntry>> {
         let file = File::open(file_path)?;
         let reader = BufReader::new(file);
         let mut logs: Vec<LogEntry> = Vec::new();

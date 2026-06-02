@@ -2,8 +2,8 @@ use anyhow::{Result};
 use std::{fs};
 mod cli;
 use cli::Cli;
-mod logger;
-use logger::{Logger};
+mod log_parser;
+use log_parser::{LogParser};
 mod models;
 
 fn main() -> Result<()> {
@@ -14,7 +14,7 @@ fn main() -> Result<()> {
     let first = args.first;
     let last = args.last;
 
-    let logs = Logger::read_logs(file_path)?;
+    let logs = LogParser::parse_file(file_path)?;
 
     let mut output: Vec<String> = Vec::new();
 
