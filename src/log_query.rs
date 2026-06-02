@@ -1,26 +1,12 @@
 pub struct LogQuery;
-use crate::models::{LogEntry, LogLevel};
-
-pub struct QueryOptions<'a> {
-    pub level: Option<&'a LogLevel>,
-    pub first: Option<usize>,
-    pub last: Option<usize>,
-}
+use crate::{ cli::Cli, models::{ LogEntry } };
 
 impl LogQuery {
-    pub fn query_logs(
-        logs: Vec<LogEntry>,
-        opts: QueryOptions
-    ) -> Vec<LogEntry> {
+    pub fn query_logs(logs: Vec<LogEntry>, opts: &Cli) -> Vec<LogEntry> {
         let mut output: Vec<LogEntry> = logs
             .iter()
             .filter(|entry| {
-                if let Some(filter) = opts.level {
-
-                    filter == &entry.level
-                } else {
-                    true
-                }
+                if let Some(filter) = &opts.level { filter == &entry.level } else { true }
             })
             .cloned()
             .collect();
