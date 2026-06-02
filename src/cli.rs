@@ -1,5 +1,5 @@
 use clap::Parser;
-use crate::parser::LogLevel;
+use crate::logger::LogLevel;
 use std::path::PathBuf;
 use anyhow::{Result};
 
@@ -31,4 +31,24 @@ pub struct Cli {
 
     #[arg(long, value_parser = parse_positive)]
     pub last: Option<usize>,
+}
+
+impl Cli {
+    pub fn parse() -> Result<Self> {
+        let args = <Self as clap::Parser>::parse();
+        args.validate()?;
+        Ok(args)
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.first.is_some() && self.last.is_some() {
+            anyhow::bail!("--first and --last cannot be used together");
+        }
+
+        if !self.file_path.is_file() {
+            anyhow::bail!("Expected a file path, got '{}'", self.file_path.display());
+        }
+
+        Ok(())
+    }
 }

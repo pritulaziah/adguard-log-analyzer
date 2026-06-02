@@ -1,5 +1,12 @@
+use anyhow::Result;
+use std::{
+    fs::File,
+    io::{ BufRead, BufReader },
+    path::Path,
+    fmt::{ Display, Formatter, Result as FmtResult },
+    str::FromStr,
+};
 use chrono::NaiveDateTime;
-use std::{fmt::{Display, Formatter, Result as FmtResult}, str::FromStr};
 
 #[derive(clap::ValueEnum, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum LogLevel {
@@ -46,9 +53,48 @@ pub struct LogEntry {
     pub message: String,
 }
 
-pub struct LogParser;
+pub struct Logger;
 
-impl LogParser {
+impl Logger {
+    pub fn read_logs<P: AsRef<Path>>(file_path: P) -> Result<Vec<LogEntry>> {
+        let file = File::open(file_path)?;
+        let reader = BufReader::new(file);
+        let mut logs: Vec<LogEntry> = Vec::new();
+        let mut current: Option<String> = None;
+
+        for (i, line) in reader.lines().enumerate() {
+            let line = line?;
+            let line = if i == 0 { line.trim_start_matches('\u{feff}') } else { &line };
+
+            if Self::is_log_start(line) {
+                if let Some(prev) = current.take() {
+                    if let Some(entry) = Self::parse_line(&prev) {
+                        logs.push(entry);
+                    }
+                }
+                current = Some(line.to_string());
+            } else if let Some(ref mut buf) = current {
+                buf.push('\n');
+                buf.push_str(line);
+            }
+        }
+
+        if let Some(prev) = current {
+            if let Some(entry) = Self::parse_line(&prev) {
+                logs.push(entry);
+            }
+        }
+
+        Ok(logs)
+    }
+
+    fn is_log_start(line: &str) -> bool {
+        line.split(", ")
+            .next()
+            .and_then(|word| word.parse::<LogLevel>().ok())
+            .is_some()
+    }
+
     pub fn parse_line(line: &str) -> Option<LogEntry> {
         let parts: Vec<&str> = line.splitn(6, ", ").collect();
 
@@ -61,7 +107,9 @@ impl LogParser {
             "VERBOSE" => LogLevel::Verbose,
             "WARNING" => LogLevel::Warning,
             "ERROR" => LogLevel::Error,
-            _ => return None,
+            _ => {
+                return None;
+            }
         };
 
         let process = parts[1].to_string();

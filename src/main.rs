@@ -1,29 +1,19 @@
-use clap::Parser;
 use anyhow::{Result};
 use std::{fs};
-mod parser;
 mod cli;
 use cli::Cli;
-mod reader;
-use reader::{LogReader};
+mod logger;
+use logger::{Logger};
 
 fn main() -> Result<()> {
-    let args = Cli::parse();
+    let args = Cli::parse()?;
     let level = args.level.as_ref();
     let file_path = &args.file_path;
     let save = args.save;
     let first = args.first;
     let last = args.last;
 
-    if first.is_some() && last.is_some() {
-        anyhow::bail!("--first and --last cannot be used together");
-    }
-
-    if !file_path.is_file() {
-        anyhow::bail!("Expected a file path, got '{}'", file_path.display());
-    }
-
-    let logs = LogReader::read_logs(file_path)?;
+    let logs = Logger::read_logs(file_path)?;
 
     let mut output: Vec<String> = Vec::new();
 
