@@ -1,7 +1,6 @@
 use crate::{ cli::Cli, models::{ LogEntry, LogLevel } };
 use std::{ collections::HashMap, fs };
 use anyhow::{ Ok, Result };
-use colored::*;
 
 fn format_duration(duration: chrono::Duration) -> String {
     let total_seconds = duration.num_seconds();
@@ -33,14 +32,7 @@ pub fn output_logs(logs: Vec<LogEntry>, opts: &Cli) -> Result<()> {
         println!("Total logs: {}", len_logs);
         println!();
         for level in &[LogLevel::Info, LogLevel::Error, LogLevel::Warning, LogLevel::Verbose] {
-            let label = format!("{:<12}", level.to_string());
-            let colored = match level {
-                LogLevel::Info => label.green(),
-                LogLevel::Error => label.red(),
-                LogLevel::Warning => label.yellow(),
-                LogLevel::Verbose => label.blue(),
-            };
-            println!("{} {}", colored, counts.get(level).unwrap_or(&0));
+            println!("{} {}", level.colored_label(), counts.get(level).unwrap_or(&0));
         }
 
         if

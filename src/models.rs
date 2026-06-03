@@ -1,6 +1,7 @@
 use std::fmt::{ Display, Formatter, Result as FmtResult };
 use std::str::FromStr;
 use chrono::NaiveDateTime;
+use colored::*;
 
 #[derive(clap::ValueEnum, Debug, Hash, PartialEq, Eq, Clone)]
 pub enum LogLevel {
@@ -34,6 +35,18 @@ impl FromStr for LogLevel {
     }
 }
 
+impl LogLevel {
+    pub fn colored_label(&self) -> ColoredString {
+        let label = format!("{:<12}", self.to_string());
+        match self {
+            LogLevel::Info => label.green(),
+            LogLevel::Error => label.red(),
+            LogLevel::Warning => label.yellow(),
+            LogLevel::Verbose => label.blue(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct LogEntry {
     pub level: LogLevel,
@@ -49,6 +62,11 @@ pub struct LogEntry {
 
 impl Display for LogEntry {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        write!(f, "{}, {:?}, {}", self.level, self.timestamp, self.message)
+        write!(
+            f,
+            "{} {}",
+            self.level.colored_label(),
+            format!("{:?}, {}", self.timestamp, self.message)
+        )
     }
 }
