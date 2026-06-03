@@ -11,9 +11,8 @@ use output::{ output_logs };
 
 fn main() -> Result<()> {
     let args = Cli::parse()?;
-    let file_path = &args.file_path;
 
-    let logs = parse_file(file_path)?;
+    let logs = parse_file(&args.file_path)?;
     let selected_logs = query_logs(logs, &args);
     output_logs(selected_logs, &args)?;
 
