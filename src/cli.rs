@@ -1,12 +1,10 @@
 use clap::Parser;
 use crate::models::LogLevel;
 use std::path::PathBuf;
-use anyhow::{Result};
+use anyhow::{ Result };
 
 fn parse_positive(s: &str) -> Result<usize> {
-    let n: usize = s
-        .parse()
-        .map_err(|_| anyhow::anyhow!("`{s}` is not a valid positive integer"))?;
+    let n: usize = s.parse().map_err(|_| anyhow::anyhow!("`{s}` is not a valid positive integer"))?;
 
     if n == 0 {
         anyhow::bail!("`{s}` must be greater than 0");

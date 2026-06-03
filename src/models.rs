@@ -49,6 +49,6 @@ pub struct LogEntry {
 
 impl Display for LogEntry {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        write!(f, "{:?}, {:?}, {}", self.level, self.timestamp, self.message)
+        write!(f, "{}, {:?}, {}", self.level, self.timestamp, self.message)
     }
 }
