@@ -91,7 +91,9 @@ pub fn output_logs(entries: Vec<LogEntry>, opts: &Cli) -> Result<()> {
 
         fs::write(format!("{}.log", segments.join("_")), output)?;
     } else {
-        println!("{}", output);
+        for entry in &entries {
+            println!("{} {:?}, {}", entry.level.colored_label(), entry.timestamp, entry.message);
+        }
     }
 
     Ok(())

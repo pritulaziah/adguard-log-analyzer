@@ -65,7 +65,7 @@ impl Display for LogEntry {
         write!(
             f,
             "{} {}",
-            self.level.colored_label(),
+            self.level,
             format!("{:?}, {}", self.timestamp, self.message)
         )
     }
