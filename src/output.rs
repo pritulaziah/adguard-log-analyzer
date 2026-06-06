@@ -1,6 +1,7 @@
-use crate::{ cli::Cli, models::{ LogEntry, LogLevel } };
-use std::{ collections::HashMap, fs };
+use crate::{ cli::Cli, models::{ LogEntry, Stats } };
+use std::{ collections::HashMap, fs, sync::LazyLock };
 use anyhow::Result;
+use regex::Regex;
 
 fn format_duration(duration: chrono::Duration) -> String {
     let total_secs = duration.num_seconds();
@@ -11,30 +12,51 @@ fn format_duration(duration: chrono::Duration) -> String {
 }
 
 pub fn output_logs(entries: Vec<LogEntry>, opts: &Cli) -> Result<()> {
+    let filename = opts.file_path.file_name().unwrap().to_string_lossy().to_string();
+    let out_dir = format!("result_logs/{}", filename);
+    fs::create_dir_all(&out_dir)?;
+
     if opts.stats {
         let total = entries.len();
-        println!("TOTAL LOGS: {}", total);
 
-        let mut level_counts = HashMap::new();
+        let mut levels: HashMap<String, usize> = HashMap::new();
+        let mut modules: HashMap<String, String> = HashMap::new();
+
+        static DLL_RE: LazyLock<Regex> = LazyLock::new(||
+            Regex::new(r"^(.+\.dll): version is ([^,]+)").unwrap()
+        );
+        static OK_RE: LazyLock<Regex> = LazyLock::new(||
+            Regex::new(r"^(.+?): (OK):").unwrap()
+        );
+        static OS_RE: LazyLock<Regex> = LazyLock::new(||
+            Regex::new(r"^OS version is (.+)").unwrap()
+        );
 
         for entry in &entries {
-            *level_counts.entry(entry.level.clone()).or_insert(0) += 1;
+            *levels.entry(entry.level.to_string()).or_insert(0) += 1;
 
             if
                 let Some(module_info) = entry.message.strip_prefix(
                     "Application version and installed modules info:\n"
                 )
             {
-                for line in module_info.split('\n') {
-                    let head = line.split(',').next();
+                for line in module_info.trim().split('\n') {
+                    let line = line.trim_matches(|c: char| c == ',' || c.is_whitespace());
 
-                    if let Some(head) = head {
-                        let cleaned = head.trim().replacen(": version is", ":", 1);
-                        let parts: Vec<&str> = cleaned.split(": ").collect();
+                    if line.is_empty() {
+                        continue;
+                    }
 
-                        if parts.len() >= 2 {
-                            println!("  {}: {}", parts[0], parts[1]);
-                        }
+                    if let Some(rest) = line.strip_prefix("Application version is ") {
+                        modules.insert("application_version".into(), rest.to_string());
+                    } else if let Some(rest) = line.strip_prefix("Application shown version is ") {
+                        modules.insert("application_shown_version".into(), rest.to_string());
+                    } else if let Some(caps) = DLL_RE.captures(line) {
+                        modules.insert(caps[1].to_string(), caps[2].to_string());
+                    } else if let Some(caps) = OK_RE.captures(line) {
+                        modules.insert(caps[1].to_string(), caps[2].to_string());
+                    } else if let Some(caps) = OS_RE.captures(line) {
+                        modules.insert("os_version".into(), caps[1].to_string());
                     }
                 }
             }
@@ -48,53 +70,45 @@ pub fn output_logs(entries: Vec<LogEntry>, opts: &Cli) -> Result<()> {
             _ => None,
         };
 
-        println!();
-        for level in &[LogLevel::Info, LogLevel::Error, LogLevel::Warning, LogLevel::Verbose] {
-            println!("{} {}", level.colored_label(), level_counts.get(level).unwrap_or(&0));
-        }
-
-        if let (Some(first), Some(last), Some(span)) = (first_ts, last_ts, span) {
-            if total > 1 {
-                println!();
-                println!("First log:  {}", first.format("%d.%m.%Y %H:%M:%S%.3f"));
-                println!("Last log:   {}", last.format("%d.%m.%Y %H:%M:%S%.3f"));
-                println!("Duration:   {}", format_duration(span));
-            }
-        }
-
-        return Ok(());
-    }
-
-    if opts.save {
-        let level_name = match &opts.level {
-            Some(lvl) => lvl.to_string(),
-            None => "all".to_string(),
+        let stats = Stats {
+            total,
+            levels,
+            modules,
+            first_timestamp: first_ts.map(|ts| ts.format("%d.%m.%Y %H:%M:%S%.3f").to_string()),
+            last_timestamp: last_ts.map(|ts| ts.format("%d.%m.%Y %H:%M:%S%.3f").to_string()),
+            duration: span.map(|d| format_duration(d)),
         };
-        let filename = opts.file_path.file_name().unwrap().to_string_lossy().to_string();
 
-        let out_dir = format!("result_logs/{}", filename);
-        fs::create_dir_all(&out_dir)?;
-
-        let mut segments = vec![format!("{}/{}", out_dir, level_name.to_lowercase())];
-
-        if let Some(n) = opts.first {
-            segments.push(format!("first{}", n));
-        } else if let Some(n) = opts.last {
-            segments.push(format!("last{}", n));
-        }
-
-        let output = entries
-            .iter()
-            .map(|e| e.to_string())
-            .collect::<Vec<String>>()
-            .join("\n");
-
-        fs::write(format!("{}.log", segments.join("_")), output)?;
-    } else {
-        for entry in &entries {
-            println!("{} {:?}, {}", entry.level.colored_label(), entry.timestamp, entry.message);
-        }
+        let json = serde_json::to_string_pretty(&stats)?;
+        fs::write(format!("{}/stats.log.json", out_dir), json)?;
     }
+
+    let level_name = match &opts.level {
+        Some(lvl) => lvl.to_string(),
+        None => "all".to_string(),
+    };
+
+    let mut segments = vec![];
+
+    if opts.sciter {
+        segments.push("sciter".to_string());
+    } else {
+        segments.push(level_name.to_lowercase());
+    }
+
+    if let Some(n) = opts.first {
+        segments.push(format!("first{}", n));
+    } else if let Some(n) = opts.last {
+        segments.push(format!("last{}", n));
+    }
+
+    let output = entries
+        .iter()
+        .map(|e| e.to_string())
+        .collect::<Vec<String>>()
+        .join("\n");
+
+    fs::write(format!("{}/{}.log", out_dir, segments.join("_")), output)?;
 
     Ok(())
 }

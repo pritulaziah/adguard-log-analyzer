@@ -1,9 +1,10 @@
+use std::collections::HashMap;
 use std::fmt::{ Display, Formatter, Result as FmtResult };
 use std::str::FromStr;
 use chrono::NaiveDateTime;
-use colored::*;
+use serde::Serialize;
 
-#[derive(clap::ValueEnum, Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(clap::ValueEnum, Debug, Hash, PartialEq, Eq, Clone, Serialize)]
 pub enum LogLevel {
     Verbose,
     Info,
@@ -35,18 +36,6 @@ impl FromStr for LogLevel {
     }
 }
 
-impl LogLevel {
-    pub fn colored_label(&self) -> ColoredString {
-        let label = format!("{:<12}", self.to_string());
-        match self {
-            LogLevel::Info => label.green(),
-            LogLevel::Error => label.red(),
-            LogLevel::Warning => label.yellow(),
-            LogLevel::Verbose => label.blue(),
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct LogEntry {
     pub level: LogLevel,
@@ -65,9 +54,22 @@ impl Display for LogEntry {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(
             f,
-            "{} {}",
+            "{}, {}",
             self.level,
             format!("{:?}, {}", self.timestamp, self.message)
         )
     }
+}
+
+#[derive(Serialize)]
+pub struct Stats {
+    pub total: usize,
+    pub levels: HashMap<String, usize>,
+    pub modules: HashMap<String, String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub first_timestamp: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_timestamp: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration: Option<String>,
 }

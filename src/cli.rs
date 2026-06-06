@@ -21,9 +21,6 @@ pub struct Cli {
     #[arg(long, short = 'l', value_enum, ignore_case = true)]
     pub level: Option<LogLevel>,
 
-    #[arg(long)]
-    pub save: bool,
-
     #[arg(long, value_parser = parse_positive)]
     pub first: Option<usize>,
 
@@ -45,12 +42,12 @@ impl Cli {
     }
 
     fn validate(&self) -> Result<()> {
-        if self.first.is_some() && self.last.is_some() {
-            anyhow::bail!("--first and --last cannot be used together");
+        if self.sciter && self.level.is_some() {
+            anyhow::bail!("--sciter cannot be used with --level");
         }
 
-        if (self.level.is_some() || self.save || self.sciter) && self.stats {
-            anyhow::bail!("--level, --save, and --sciter cannot be used with --stats");
+        if self.first.is_some() && self.last.is_some() {
+            anyhow::bail!("--first and --last cannot be used together");
         }
 
         if !self.file_path.is_file() {
