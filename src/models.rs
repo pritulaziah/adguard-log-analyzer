@@ -36,7 +36,7 @@ impl FromStr for LogLevel {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct LogEntry {
     pub level: LogLevel,
     #[allow(dead_code)]
@@ -73,3 +73,20 @@ pub struct Stats {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<String>,
 }
+
+#[derive(Serialize)]
+pub struct JsonLogEntry {
+    pub timestamp: NaiveDateTime,
+    pub level: LogLevel,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub service: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payload: Option<serde_json::Value>,
+}
+

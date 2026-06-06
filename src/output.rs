@@ -1,4 +1,4 @@
-use crate::{ cli::Cli, models::{ LogEntry, Stats } };
+use crate::{ cli::Cli, models::{ LogEntry, JsonLogEntry, Stats } };
 use std::{ collections::HashMap, fs, sync::LazyLock };
 use anyhow::Result;
 use regex::Regex;
@@ -25,9 +25,7 @@ pub fn output_logs(entries: Vec<LogEntry>, opts: &Cli) -> Result<()> {
         static DLL_RE: LazyLock<Regex> = LazyLock::new(||
             Regex::new(r"^(.+\.dll): version is ([^,]+)").unwrap()
         );
-        static OK_RE: LazyLock<Regex> = LazyLock::new(||
-            Regex::new(r"^(.+?): (OK):").unwrap()
-        );
+        static OK_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(.+?): (OK):").unwrap());
         static OS_RE: LazyLock<Regex> = LazyLock::new(||
             Regex::new(r"^OS version is (.+)").unwrap()
         );
@@ -41,7 +39,7 @@ pub fn output_logs(entries: Vec<LogEntry>, opts: &Cli) -> Result<()> {
                 )
             {
                 for line in module_info.trim().split('\n') {
-                    let line = line.trim_matches(|c: char| c == ',' || c.is_whitespace());
+                    let line = line.trim_matches(|c: char| (c == ',' || c.is_whitespace()));
 
                     if line.is_empty() {
                         continue;
@@ -102,13 +100,65 @@ pub fn output_logs(entries: Vec<LogEntry>, opts: &Cli) -> Result<()> {
         segments.push(format!("last{}", n));
     }
 
-    let output = entries
+    let json_entries: Vec<JsonLogEntry> = entries
         .iter()
-        .map(|e| e.to_string())
-        .collect::<Vec<String>>()
-        .join("\n");
+        .map(|e| convert_to_json_entry(e))
+        .collect();
+    let output_content = serde_json::to_string_pretty(&json_entries)?;
 
-    fs::write(format!("{}/{}.log", out_dir, segments.join("_")), output)?;
+    fs::write(format!("{}/{}.json", out_dir, segments.join("_")), output_content)?;
 
     Ok(())
+}
+
+fn convert_to_json_entry(entry: &LogEntry) -> JsonLogEntry {
+    if entry.is_sciter_message {
+        static SCITER_RE: LazyLock<Regex> = LazyLock::new(||
+            Regex::new(r"^\[([^\]]+)\]\s+(\S+\s\S+)\s+\[(.+)\]$").unwrap()
+        );
+
+        if let Some(caps) = SCITER_RE.captures(&entry.message) {
+            let service_method = &caps[1];
+            let (service, method) = service_method
+                .rsplit_once('.')
+                .map(|(s, m)| (Some(s.to_string()), Some(m.to_string())))
+                .unwrap_or((None, None));
+
+            let event_type = caps[2].to_string();
+            let payload_str = &caps[3];
+
+            let payload = serde_json::from_str(payload_str).ok();
+
+            JsonLogEntry {
+                timestamp: entry.timestamp,
+                level: entry.level.clone(),
+                message: None,
+                service,
+                method,
+                event_type: Some(event_type),
+                payload,
+            }
+        } else {
+            // Fallback: doesn't match expected format
+            JsonLogEntry {
+                timestamp: entry.timestamp,
+                level: entry.level.clone(),
+                message: Some(entry.message.clone()),
+                service: None,
+                method: None,
+                event_type: None,
+                payload: None,
+            }
+        }
+    } else {
+        JsonLogEntry {
+            timestamp: entry.timestamp,
+            level: entry.level.clone(),
+            message: Some(entry.message.clone()),
+            service: None,
+            method: None,
+            event_type: None,
+            payload: None,
+        }
+    }
 }
