@@ -58,6 +58,7 @@ pub struct LogEntry {
     pub thread_id: u32,
     pub timestamp: NaiveDateTime,
     pub message: String,
+    pub is_sciter_message: bool,
 }
 
 impl Display for LogEntry {

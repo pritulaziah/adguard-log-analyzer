@@ -32,6 +32,9 @@ pub struct Cli {
 
     #[arg(long)]
     pub stats: bool,
+
+    #[arg(long)]
+    pub sciter: bool,
 }
 
 impl Cli {
@@ -46,8 +49,8 @@ impl Cli {
             anyhow::bail!("--first and --last cannot be used together");
         }
 
-        if (self.level.is_some() || self.save) && self.stats {
-            anyhow::bail!("--level and --save cannot be used with --stats");
+        if (self.level.is_some() || self.save || self.sciter) && self.stats {
+            anyhow::bail!("--level, --save, and --sciter cannot be used with --stats");
         }
 
         if !self.file_path.is_file() {

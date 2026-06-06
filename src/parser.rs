@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::{ fs::File, io::{ BufRead, BufReader }, path::Path };
 use chrono::NaiveDateTime;
 use crate::models::{ LogEntry, LogLevel };
+use regex::Regex;
 
 pub fn parse_file<P: AsRef<Path>>(file_path: P) -> Result<Vec<LogEntry>> {
     let file = File::open(file_path)?;
@@ -58,12 +59,17 @@ pub fn parse_line(line: &str) -> Option<LogEntry> {
             return None;
         }
     };
-
     let process = parts[1].to_string();
     let logger = parts[2].to_string();
     let thread_id = parts[3].parse().ok()?;
     let timestamp = NaiveDateTime::parse_from_str(parts[4], "%d.%m.%Y %H:%M:%S%.3f").ok()?;
-    let message = parts[5].to_string();
+    let mut message = parts[5].to_string();
+    let sciter_re = Regex::new(r"SciterMessage, OS_INFO\(OT_TIS\): \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z DBG: ").unwrap();
+    let is_sciter_message = sciter_re.is_match(&message);
+
+    if is_sciter_message {
+        message = sciter_re.replace(&message, "").to_string();
+    }
 
     Some(LogEntry {
         level,
@@ -72,5 +78,6 @@ pub fn parse_line(line: &str) -> Option<LogEntry> {
         thread_id,
         timestamp,
         message,
+        is_sciter_message,
     })
 }
