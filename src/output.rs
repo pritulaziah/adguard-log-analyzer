@@ -65,12 +65,6 @@ pub fn output_logs(entries: Vec<LogEntry>, opts: &Cli) -> Result<()> {
         return Ok(());
     }
 
-    let output = entries
-        .iter()
-        .map(|e| e.to_string())
-        .collect::<Vec<String>>()
-        .join("\n");
-
     if opts.save {
         let level_name = match &opts.level {
             Some(lvl) => lvl.to_string(),
@@ -88,6 +82,12 @@ pub fn output_logs(entries: Vec<LogEntry>, opts: &Cli) -> Result<()> {
         } else if let Some(n) = opts.last {
             segments.push(format!("last{}", n));
         }
+
+        let output = entries
+            .iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<String>>()
+            .join("\n");
 
         fs::write(format!("{}.log", segments.join("_")), output)?;
     } else {
