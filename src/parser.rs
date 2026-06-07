@@ -1,8 +1,9 @@
 use anyhow::Result;
 use std::{ fs::File, io::{ BufRead, BufReader }, path::Path };
 use chrono::NaiveDateTime;
-use crate::models::{ LogEntry, LogLevel };
+use crate::models::{ LogEntry };
 use regex::Regex;
+use std::sync::LazyLock;
 
 pub fn parse_file<P: AsRef<Path>>(file_path: P) -> Result<Vec<LogEntry>> {
     let file = File::open(file_path)?;
@@ -36,11 +37,12 @@ pub fn parse_file<P: AsRef<Path>>(file_path: P) -> Result<Vec<LogEntry>> {
     Ok(logs)
 }
 
+static LOG_START_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\w+, Adguard\.exe,").unwrap()
+});
+
 fn is_log_start(line: &str) -> bool {
-    line.split(", ")
-        .next()
-        .and_then(|word| word.parse::<LogLevel>().ok())
-        .is_some()
+    LOG_START_RE.is_match(line)
 }
 
 pub fn parse_line(line: &str) -> Option<LogEntry> {
@@ -50,15 +52,7 @@ pub fn parse_line(line: &str) -> Option<LogEntry> {
         return None;
     }
 
-    let level = match parts[0] {
-        "INFO" => LogLevel::Info,
-        "VERBOSE" => LogLevel::Verbose,
-        "WARNING" => LogLevel::Warning,
-        "ERROR" => LogLevel::Error,
-        _ => {
-            return None;
-        }
-    };
+    let level = parts[0].to_string();
     let process = parts[1].to_string();
     let logger = parts[2].to_string();
     let thread_id = parts[3].parse().ok()?;
@@ -68,7 +62,10 @@ pub fn parse_line(line: &str) -> Option<LogEntry> {
     let is_sciter_message = sciter_re.is_match(&message);
 
     if is_sciter_message {
-        message = sciter_re.replace(&message, "").to_string();
+        message = sciter_re
+        .replace(&message, "")
+        .replace(":Value has been hidden,", ":\"\",")
+        .to_string();
     }
 
     Some(LogEntry {

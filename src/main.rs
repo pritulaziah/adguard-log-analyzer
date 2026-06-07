@@ -13,7 +13,7 @@ fn main() -> Result<()> {
     let args = Cli::parse()?;
 
     let logs = parse_file(&args.file_path)?;
-    let selected_logs = query_logs(logs, &args);
+    let selected_logs = query_logs(logs);
     output_logs(selected_logs, &args)?;
 
     Ok(())

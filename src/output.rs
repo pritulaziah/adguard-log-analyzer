@@ -8,26 +8,13 @@ pub fn output_logs(entries: Vec<LogEntry>, opts: &Cli) -> Result<()> {
     let out_dir = format!("result_logs/{}", filename);
     fs::create_dir_all(&out_dir)?;
 
-    let level_name = match &opts.level {
-        Some(lvl) => lvl.to_string(),
-        None => "all".to_string(),
-    };
-
-    let mut segments = vec![];
-
-    if opts.sciter {
-        segments.push("sciter".to_string());
-    } else {
-        segments.push(level_name.to_lowercase());
-    }
-
     let json_entries: Vec<JsonLogEntry> = entries
         .iter()
         .map(|e| convert_to_json_entry(e))
         .collect();
     let output_content = serde_json::to_string_pretty(&json_entries)?;
 
-    fs::write(format!("{}/{}.json", out_dir, segments.join("_")), output_content)?;
+    fs::write(format!("{}/{}.sciter.json", out_dir, filename), output_content)?;
 
     Ok(())
 }
