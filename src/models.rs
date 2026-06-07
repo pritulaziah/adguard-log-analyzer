@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fmt::{ Display, Formatter, Result as FmtResult };
 use std::str::FromStr;
 use chrono::NaiveDateTime;
@@ -62,19 +61,6 @@ impl Display for LogEntry {
 }
 
 #[derive(Serialize)]
-pub struct Stats {
-    pub total: usize,
-    pub levels: HashMap<String, usize>,
-    pub modules: HashMap<String, String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub first_timestamp: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_timestamp: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration: Option<String>,
-}
-
-#[derive(Serialize)]
 pub struct JsonLogEntry {
     pub timestamp: NaiveDateTime,
     pub level: LogLevel,
@@ -89,4 +75,3 @@ pub struct JsonLogEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payload: Option<serde_json::Value>,
 }
-

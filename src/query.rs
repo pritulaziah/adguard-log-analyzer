@@ -13,12 +13,5 @@ pub fn query_logs(logs: Vec<LogEntry>, opts: &Cli) -> Vec<LogEntry> {
         selected.retain(|e| e.is_sciter_message);
     }
 
-    if let Some(n) = opts.first {
-        selected.truncate(n);
-    } else if let Some(n) = opts.last {
-        let len = selected.len();
-        selected.drain(0..len.saturating_sub(n));
-    }
-
     selected
 }
