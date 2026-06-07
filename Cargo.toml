@@ -1,5 +1,5 @@
 [package]
-name = "adguard-log-analyzer"
+name = "adguard-sciter-log-analyzer"
 version = "0.1.0"
 edition = "2024"
 
