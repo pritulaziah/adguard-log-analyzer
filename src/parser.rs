@@ -52,29 +52,23 @@ pub fn parse_line(line: &str) -> Option<LogEntry> {
         return None;
     }
 
-    let level = parts[0].to_string();
-    let process = parts[1].to_string();
-    let logger = parts[2].to_string();
-    let thread_id = parts[3].parse().ok()?;
     let timestamp = NaiveDateTime::parse_from_str(parts[4], "%d.%m.%Y %H:%M:%S%.3f").ok()?;
-    let mut message = parts[5].to_string();
-    let sciter_re = Regex::new(r"SciterMessage, OS_INFO\(OT_TIS\): \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z DBG: ").unwrap();
-    let is_sciter_message = sciter_re.is_match(&message);
+    let mut message = parts[5].trim().to_string();
+    let sciter_re = Regex::new(
+        r"SciterMessage, OS_INFO\(OT_TIS\): \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z DBG: "
+    ).unwrap();
 
-    if is_sciter_message {
+    if sciter_re.is_match(&message) {
         message = sciter_re
-        .replace(&message, "")
-        .replace(":Value has been hidden,", ":\"\",")
-        .to_string();
+            .replace(&message, "")
+            .replace(":Value has been hidden,", ":\"\",")
+            .to_string();
+
+        return Some(LogEntry {
+            timestamp,
+            message,
+        });
     }
 
-    Some(LogEntry {
-        level,
-        process,
-        logger,
-        thread_id,
-        timestamp,
-        message,
-        is_sciter_message,
-    })
+    return None;
 }
