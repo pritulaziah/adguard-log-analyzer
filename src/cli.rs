@@ -1,11 +1,14 @@
+use anyhow::Result;
 use clap::Parser;
 use std::path::PathBuf;
-use anyhow::{ Result };
 
 #[derive(Parser, Debug)]
 #[command(version, about)]
 pub struct Cli {
     pub file_path: PathBuf,
+
+    #[arg(long)]
+    pub service: Option<String>,
 }
 
 impl Cli {
