@@ -28,8 +28,8 @@ pub fn output_logs(entries: Vec<LogEntry>, opts: &Cli) -> Result<()> {
 }
 
 fn group_by_service(entries: &[LogEntry]) -> Vec<JsonOutputEntry> {
-    let mut output = Vec::new();
-    let mut service_indexes: HashMap<String, usize> = HashMap::new();
+    let mut groups = HashMap::new();
+    let mut raw_entries = Vec::new();
 
     for entry in entries {
         let (Some(service), Some(method), Some(event_type)) = (
@@ -37,42 +37,38 @@ fn group_by_service(entries: &[LogEntry]) -> Vec<JsonOutputEntry> {
             entry.method.as_ref(),
             entry.event_type.as_ref(),
         ) else {
-            output.push(JsonOutputEntry::Raw(JsonRawLogEntry {
-                timestamp: entry.timestamp,
-                message: Some(entry.message.clone()),
-            }));
+            raw_entries.push(JsonOutputEntry::Raw(raw_log_entry(entry)));
             continue;
         };
 
-        let service_index = ensure_service_group(&mut output, &mut service_indexes, service);
-        if let Some(JsonOutputEntry::Service(group)) = output.get_mut(service_index) {
-            group.calls.push(JsonCall {
-                method: method.clone(),
-                event_type: event_type.clone(),
-                timestamp: entry.timestamp,
-                raw: entry.message.clone(),
-                payload: entry.payload.clone().unwrap_or(serde_json::Value::Null),
-            });
-        }
+        let call = JsonCall {
+            method: method.clone(),
+            event_type: event_type.clone(),
+            timestamp: entry.timestamp,
+            raw: entry.message.clone(),
+            payload: entry.payload.clone().unwrap_or(serde_json::Value::Null),
+        };
+
+        groups
+            .entry(service.clone())
+            .or_insert_with(|| JsonServiceGroup {
+                service: service.clone(),
+                calls: Vec::new(),
+            })
+            .calls
+            .push(call);
     }
 
-    output
+    groups
+        .into_values()
+        .map(JsonOutputEntry::Service)
+        .chain(raw_entries)
+        .collect()
 }
 
-fn ensure_service_group(
-    output: &mut Vec<JsonOutputEntry>,
-    service_indexes: &mut HashMap<String, usize>,
-    service: &str,
-) -> usize {
-    if let Some(index) = service_indexes.get(service) {
-        return *index;
+fn raw_log_entry(entry: &LogEntry) -> JsonRawLogEntry {
+    JsonRawLogEntry {
+        timestamp: entry.timestamp,
+        message: Some(entry.message.clone()),
     }
-
-    let index = output.len();
-    output.push(JsonOutputEntry::Service(JsonServiceGroup {
-        service: service.to_string(),
-        calls: Vec::new(),
-    }));
-    service_indexes.insert(service.to_string(), index);
-    index
 }
